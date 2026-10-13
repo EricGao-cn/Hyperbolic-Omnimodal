@@ -1,0 +1,27 @@
+.cache
+.tmp
+main_results
+logs
+outputs
+model_weights
+pretrained_weights
+tests
+datasets
+docs
+/scripts/*
+!/scripts/pmrl/
+/scripts/pmrl/*
+!/scripts/pmrl/finetune_pmrl.sh
+!/scripts/pmrl/pretrain_pmrl.sh
+
+**/__pycache__
+
+# Local environments and secrets
+.venv/
+.env
+.env.*
+!.env.example
+
+# Generated evaluation output and large optional evaluation data
+/evaluation_tools/caption_tools/pycocoevalcap/tokenizer/tmp*
+/evaluation_tools/caption_tools/pycocoevalcap/meteor/data/paraphrase-en.gz
