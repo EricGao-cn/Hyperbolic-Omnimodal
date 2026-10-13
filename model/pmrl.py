@@ -474,7 +474,12 @@ class PMRL(MMGeneralModule):
                 loss_intra_ = F.cross_entropy(eigenvalues, torch.zeros(eigenvalues.shape[0]).to(eigenvalues.device).long())
                 principal_eigenvector = eigenvectors[:, :, 0]
             
-                loss_inter_ = F.cross_entropy((principal_eigenvector @ principal_eigenvector.T)/self.tau2, torch.arange(principal_eigenvector.shape[0]).to(principal_eigenvector.device).long())
+                if getattr(self.config, 'pmrl_global_negatives', False):
+                    # Matched to the hyperbolic tuple losses: 1 positive + all global-batch negatives.
+                    all_eigenvector, targets = self._distributed_pairwise_batch(principal_eigenvector)
+                    loss_inter_ = F.cross_entropy((principal_eigenvector @ all_eigenvector.T)/self.tau2, targets)
+                else:
+                    loss_inter_ = F.cross_entropy((principal_eigenvector @ principal_eigenvector.T)/self.tau2, torch.arange(principal_eigenvector.shape[0]).to(principal_eigenvector.device).long())
                 
                 loss_intra.append(loss_intra_)
                 loss_inter.append(loss_inter_)
