@@ -83,15 +83,38 @@ def pair_distance(x, y, curvature):
     return 2 * torch.asinh(_sqrt_near_zero((inner - 1) / 2)) / curvature.double().sqrt()
 
 
-def gram_distance(matrix, curvature, score="spectral"):
-    k = matrix.shape[-1]
+def gram_value(matrix, score="spectral"):
+    """lambda_max(M) >= k (or the uniform Rayleigh quotient 1^T M 1 / k)."""
     if score == "spectral":
-        value = torch.linalg.eigvalsh(matrix)[..., -1]
-    elif score == "uniform":
-        value = matrix.sum(dim=(-2, -1)) / k
-    else:
-        raise ValueError(f"Unknown Lorentz score: {score}")
-    return distance_from_eigenvalue(value, k, curvature)
+        return torch.linalg.eigvalsh(matrix)[..., -1]
+    if score == "uniform":
+        return matrix.sum(dim=(-2, -1)) / matrix.shape[-1]
+    raise ValueError(f"Unknown Lorentz score: {score}")
+
+
+def gram_distance(matrix, curvature, score="spectral"):
+    return distance_from_eigenvalue(gram_value(matrix, score), matrix.shape[-1], curvature)
+
+
+SCORE_TRANSFORMS = ("distance", "inverse", "log")
+
+
+def gram_similarity(matrix, curvature, score="spectral", transform="distance"):
+    """Monotone decreasing transforms of the same eigenvalue; 0 or 1 iff aligned.
+
+    distance: -D_M, unbounded below; geodesic distance at k=2.
+    inverse:  k/lambda in (0,1]; sech^2(sqrt(c) d/2) at k=2, cosine-like.
+    log:      -log(lambda/k) in (-inf,0].
+    """
+    k = matrix.shape[-1]
+    if transform == "distance":
+        return -gram_distance(matrix, curvature, score)
+    value = gram_value(matrix, score)
+    if transform == "inverse":
+        return k / value
+    if transform == "log":
+        return -torch.log(value / k)
+    raise ValueError(f"Unknown Lorentz score transform: {transform}")
 
 
 class _DominantEigenpair(torch.autograd.Function):
@@ -137,3 +160,35 @@ def consensus(points, curvature):
 
 def origin_radius(points, curvature):
     return torch.asinh(curvature.sqrt() * points.norm(dim=-1)) / curvature.sqrt()
+
+
+@torch.no_grad()
+def perron_diagnostics(points, curvature):
+    """Properties the method claims for each tuple [..., k, D]; logging only.
+
+    gap >= k, P on the manifold, and lambda = sum_m cosh^2(sqrt(c) d(P, X_m)),
+    i.e. the score is the dispersion of the modalities around the proxy.
+    """
+    points, curvature = points.double(), curvature.double()
+    matrix = tuple_gram(points, curvature)
+    values, vectors = torch.linalg.eigh(matrix)
+    value, vector = values[..., -1], vectors[..., -1]
+    vector = vector * torch.where(vector.sum(-1, keepdim=True) < 0, -1., 1.)
+    k = matrix.shape[-1]
+    proxy = (vector.unsqueeze(-1) * points).sum(-2) / value.sqrt().unsqueeze(-1)
+    proxy_time = time_component(proxy, curvature).squeeze(-1)
+    stored_time = (vector * time_component(points, curvature).squeeze(-1)).sum(-1) / value.sqrt()
+    cosh_to_proxy = matched_inner(proxy.unsqueeze(-2).expand_as(points), points, curvature)
+    gap = value - values[..., -2]
+    result = {
+        "perron_gap_min": gap.min().item(),
+        "perron_gap_over_k_min": (gap / k).min().item(),
+        "perron_excess_mean": (value / k - 1).mean().item(),
+        "perron_manifold_error_max": ((proxy_time - stored_time).abs() * curvature.sqrt()).max().item(),
+        "perron_identity_rel_error_max": ((cosh_to_proxy.square().sum(-1) - value).abs() / value).max().item(),
+        "perron_proxy_radius_mean": origin_radius(proxy, curvature).mean().item(),
+        "perron_min_vector_entry": vector.min().item(),
+    }
+    for index in range(k):
+        result[f"perron_weight_{index}_mean"] = vector[..., index].mean().item()
+    return result
