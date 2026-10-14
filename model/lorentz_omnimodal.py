@@ -143,11 +143,18 @@ class LorentzOmnimodal(HyperbolicSpectralPMRL):
                 # A descriptive pairwise fusion only; not used in the main panel.
                 return (self.retrieval_similarity(text, candidates["v"])
                         + self.retrieval_similarity(text, candidates["a"])) / 2
-            return torch.cat([
-                geometry.gram_similarity(geometry.candidate_gram(q, [candidates["v"], candidates["a"]], c), c, score,
-                                         self.hyperbolic_score_transform)
-                for q in text.split(chunk_size)
-            ], dim=0)
+            # Bound both axes: 64 queries against a full corpus can exceed the
+            # CUDA batched-eigensolver limit even when GPU memory is available.
+            rows = []
+            for q in text.split(chunk_size):
+                columns = []
+                candidate_chunk = max(1, 1024 // q.shape[0])
+                for v, a in zip(candidates["v"].split(candidate_chunk), candidates["a"].split(candidate_chunk)):
+                    columns.append(geometry.gram_similarity(
+                        geometry.candidate_gram(q, [v, a], c), c, score,
+                        self.hyperbolic_score_transform))
+                rows.append(torch.cat(columns, dim=1))
+            return torch.cat(rows, dim=0)
 
     def _geodesic_contrastive(self, left, right):
         all_left, targets = self._distributed_batch(left)

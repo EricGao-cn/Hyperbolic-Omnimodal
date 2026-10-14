@@ -6,6 +6,11 @@ These scripts run the plan in `PLAN.md`. The plan commits to one object, the nor
 
 All selection uses a held-out VAST split. Test numbers are reported only for the selected trial.
 
+For independent experiments on a second server before Gate A finishes, follow
+[SECOND_SERVER_PLAN.md](SECOND_SERVER_PLAN.md). The four provisional 512-d
+parent trials are supplied in [second_server_trials.json](second_server_trials.json).
+They use their own suite and do not count as final Gate B decisions.
+
 ## What changed in the model code
 
 All new options default to the existing behaviour, so the 20260929 configs reproduce unchanged. `check_geometry.py` asserts this for the default tuple loss.
@@ -15,7 +20,9 @@ All new options default to the existing behaviour, so the 20260929 configs repro
 | `hyperbolic_score_transform` | `distance` (default, −D_M), `inverse` (k/λ₁ ∈ (0,1]), `log` (−log(λ₁/k)) | `utils/lorentz_spectral.py:gram_similarity`, used by `LorentzOmnimodal` for training and native tuple retrieval |
 | `hyperbolic_contrast` | `text_vs_va` (default), `symmetric` (each modality as query against the matched other two, averaged) | `LorentzOmnimodal.spectral_loss` |
 | `hyperbolic_entailment_parent` on `lorentz_omnimodal` | `perron` (new: on-manifold Perron proxy of the same Gram, floored to the cone domain), `modality_edges`, `tangent_mean`, `svd_learned_radius` | `LorentzOmnimodal.perron_parent` / `entailment_loss`. Nonzero entailment weight was previously refused. |
-| `pmrl_global_negatives` on `pmrl` | `false` (default, rank-local 16), `true` (1 positive + all 63 global negatives, matching the hyperbolic losses) | `PMRL.forward_ret` inter loss |
+| `pmrl_global_negatives` on `pmrl` | `false` (default, rank-local batch), `true` (all global-batch candidates; 1 positive + 63 negatives with global batch 64) | `PMRL.forward_ret` inter loss |
+| `hyperbolic_geometry_fp64` on `hyperbolic_spectral_pmrl` | `false` (legacy default), `true` (matched FP64 direction-radius lift and spectral calculation) | Enabled for the new K/M control |
+| `log_spectral_diagnostics` on `pmrl` | `false` (default), `true` (detached singular-gap logging) | Enabled for the matched global-negative baseline |
 
 The new training diagnostics are written to `metrics.jsonl` under `geometry`:
 - `perron_gap_over_k_min` (expected ≥ 1)
@@ -40,7 +47,8 @@ VAST=/data0/xiaobo.xia/yuxuan.gao/PMRL/minimal_causal_assets_20260820/vast150k
 
 # Step 0: fixed holdout (2048 clips) removed from training for every new trial
 python experiments/next_steps/holdout_split.py --annotations $VAST/VASTannotations150k.accepted.json \
-    --vision $VAST/videos --audio /data0/xiaobo.xia/yuxuan.gao/PMRL/datasets/vast150k/audios --out $S/holdout
+    --vision /data0/xiaobo.xia/yuxuan.gao/PMRL/datasets/vast150k/videos \
+    --audio /data0/xiaobo.xia/yuxuan.gao/PMRL/datasets/vast150k/audios --out $S/holdout
 
 # Snapshot the code, reuse the 0929 templates so media/batch/eval protocol match
 python experiments/next_steps/suite.py --suite $S init --templates $OLD/templates \
@@ -51,6 +59,7 @@ python experiments/next_steps/suite.py add gate_a
 python experiments/next_steps/suite.py add pmrl_screen          # baselines do not depend on the gates
 python experiments/next_steps/suite.py run --gpus 0,1,2,3
 python experiments/next_steps/suite.py add gate_a_promote        # top-2 screens by holdout -> 1360 steps
+python experiments/next_steps/suite.py run --gpus 0,1,2,3         # finish promotions before choosing contrast
 python experiments/next_steps/suite.py add gate_a_contrast       # best text_vs_va arm, symmetric contrast
 python experiments/next_steps/suite.py run --gpus 0,1,2,3
 python experiments/next_steps/suite.py rank-agreement            # screen vs full rank agreement
@@ -67,7 +76,10 @@ python experiments/next_steps/suite.py add lowdim --basis /data0/.../lowdim_pare
 python experiments/next_steps/suite.py summarize                 # -> $S/summary.md
 ```
 
-`run` is resumable. It skips stages with `DONE.json`, records failures in `FAILED.json` without retrying them unless `--retry-failed` is passed, and `--dry-run` prints the commands. Each trial runs these stages in order:
+See [EXECUTION.md](EXECUTION.md) for this server's environment, current GPU allocation,
+memory caps, smoke acceptance, and the ordered `advance.py` controller.
+
+`run` is resumable. It skips stages with `DONE.json`, records failures in `FAILED.json` without retrying them unless `--retry-failed` is passed, and `--dry-run` prints the commands. Use `--stop-on-failure` to stop the queue on the first failure. Each trial runs these stages in order:
 1. `train`
 2. `holdout_video` (TV-only candidates, Top-50 ITM)
 3. `holdout_audio` (Stage-1 T↔A)
@@ -85,7 +97,7 @@ Gates are decided on the holdout split; `gate_a.json` and `gate_b.json` also rep
 
 ## Not covered yet
 
-- **Native tuple evaluation.** The 0929 `native_evaluation` failure reason is not in the repository. This suite runs the stage and keeps going if it fails. Read `trials/<name>/native/stdout.log` on the first full M run before trusting C1's tuple claim.
+- **Full native tuple acceptance.** Historical logs identified a CUDA batched-eigensolver failure. Native scoring now bounds both query and candidate axes to 1,024 matrices per call. CPU/GPU numerical checks and a small end-to-end evaluation passed; a full-dataset run is still required before claiming complete native evaluation. `advance.py` stops on stage failure.
 - **Hierarchy metrics.** The ActivityNet, MSR-VTT and AudioSet category-tree scripts are not in this repository. Produce `hierarchy.json` with them and pass it to `gate-b`.
 - **k = 4 (TVAS).** `LorentzOmnimodal` is fixed to T/V/A, and the subtitle branch is not lifted. This needs a model change and is not included.
 - **GRAM and HyperGRAM.** They live outside this repository. Re-evaluate them under the TV-only and native protocols separately.

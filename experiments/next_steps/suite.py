@@ -27,6 +27,8 @@ import itertools
 import json
 import math
 import os
+import signal
+import socket
 import shutil
 import subprocess
 import sys
@@ -48,6 +50,7 @@ GATE_A = dict(top50=-.3, stage1=-1., audio=-1.)
 GATE_B = dict(cone=.3, top50=-.3)
 
 KERNEL = dict(model_type='hyperbolic_spectral_pmrl', hyperbolic_spectral_temperature=.03,
+              hyperbolic_geometry_fp64=True,
               hyperbolic_spectral_anchor='text', hyperbolic_entailment_weight=0.,
               hyperbolic_entailment_edges=[], hyperbolic_entailment_parent='modality_edges',
               hyperbolic_parent_contraction=1., hyperbolic_parent_floor_margin=.001,
@@ -62,7 +65,7 @@ LORENTZ = dict(model_type='lorentz_omnimodal', hyperbolic_mapping='direction_rad
                hyperbolic_parent_floor_margin=.001, hyperbolic_entailment_min_radius=.1,
                lambda_itm=.1, ret_pairwise_stage1_train=False)
 PMRL_GLOBAL = dict(model_type='pmrl', pmrl_global_negatives=True, tau2=.1, lambda_itm=.1,
-                   ret_pairwise_stage1_train=False)
+                   ret_pairwise_stage1_train=False, log_spectral_diagnostics=True)
 
 
 # ---------------------------------------------------------------- utilities
@@ -112,6 +115,8 @@ def is_full(t):
 
 
 def stages_for(t):
+    if 'stages' in t:
+        return t['stages']
     stages = ['train', 'holdout_video', 'holdout_audio']
     if is_full(t):
         stages += ['video', 'audio']
@@ -139,7 +144,8 @@ def cmd_init(args):
         if not (templates / name).exists():
             sys.exit(f'missing template {templates / name}')
     snapshot = suite / 'source_snapshot'
-    files = subprocess.run(['git', 'ls-files'], cwd=REPO, check=True, capture_output=True, text=True).stdout.split()
+    files = subprocess.run(['git', 'ls-files', '--cached', '--others', '--exclude-standard'],
+                           cwd=REPO, check=True, capture_output=True, text=True).stdout.splitlines()
     for rel in files:
         target = snapshot / rel
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -155,6 +161,12 @@ def cmd_init(args):
                     git_diff_sha256=hashlib.sha256(diff.encode()).hexdigest(),
                     templates_from=str(templates), pretrain_dir=str(Path(args.pretrain_dir).resolve()),
                     holdout=None, gates=dict(a=GATE_A, b=GATE_B))
+    protocol['resources'] = dict(train_memory_gib=args.train_memory_gib,
+                                 eval_memory_gib=args.eval_memory_gib,
+                                 logs_dir=str(Path(args.logs_dir or REPO / '.tmp' / suite.name).resolve()),
+                                 gpu_headroom_gib=8, disk_reserve_gib=40,
+                                 save_optimizer=False)
+    (suite / 'source_changes.diff').write_text(diff)
     if args.holdout_dir:
         holdout = read_json(Path(args.holdout_dir) / 'holdout_manifest.json')
         protocol['holdout'] = holdout
@@ -181,7 +193,7 @@ def add_gate_a_promote(trials, suite, args):
     screens = [t for t in trials if t['phase'] == 'gate_a_screen']
     ranked = rank_by_holdout(suite, screens)
     if len(ranked) < len(screens):
-        print(f'WARNING: only {len(ranked)}/{len(screens)} screens have holdout metrics')
+        sys.exit(f'only {len(ranked)}/{len(screens)} screens have holdout metrics; refusing partial selection')
     out = []
     for t, key in ranked[:args.top]:
         m = t['model']
@@ -279,7 +291,9 @@ def holdout_entries(protocol, task):
     return [dict(type='annoindexed', training=False, name='finetune_area', txt=holdout['holdout_txt'],
                  vision=holdout['vision'], audio=holdout['audio'], vision_format='video_rawvideo',
                  vision_sample_num=holdout.get('vision_sample_num', 8), audio_sample_num=1,
-                 task=task, n_workers=8, batch_size=64)]
+                 task=task, n_workers=2, batch_size=64, strict_media=True,
+                 loader_timeout=600, bounded_video_decode=True, video_decode_timeout=10,
+                 drop_subtitles=True)]
 
 
 def build_config(suite, t, stage):
@@ -292,15 +306,16 @@ def build_config(suite, t, stage):
     run.update(default=str(source / 'config/pmrl/default_run_cfg.json'), output_dir=str(output),
                log_name=f"{t['name']}_{stage}", seed=t['seed'], resume=False, first_eval=False,
                log_steps=10, resource_profile=True)
-    for key in ('gpu_memory_limit_gib', 'checkpoint_lock'):
-        run.pop(key, None)
+    resources = protocol.get('resources', {})
+    run['gpu_memory_limit_gib'] = resources.get('train_memory_gib' if stage == 'train' else 'eval_memory_gib', 30)
+    run['checkpoint_lock'] = str(suite / 'checkpoint.lock')
     model = copy.deepcopy(read_json(suite / 'templates' / 'train.json')['model_cfg'])
     model.update(t['model'])
     model['default'] = str(source / 'config/pmrl/default_model_cfg.json')
     if stage == 'train':
         run.update(num_train_steps=FULL, stop_after_updates=t['steps'], new_lr=t['new_lr'],
                    new_params_name=['hyperbolic_'], valid_freq=1, final_checkpoint_only=True,
-                   save_optimizer=is_full(t), save_best=False, checkpoint='', mode='training',
+                   save_optimizer=resources.get('save_optimizer', False), save_best=False, checkpoint='', mode='training',
                    pretrain_dir=protocol['pretrain_dir'], amp_init_scale=32768.)
         run.update(t['run'])
         train = cfg['data_cfg']['train'][0]
@@ -321,6 +336,16 @@ def build_config(suite, t, stage):
             cfg['data_cfg']['val'] = holdout_entries(protocol, 'ret%tva')
         elif stage == 'holdout_audio':
             cfg['data_cfg']['val'] = holdout_entries(protocol, 'ret%ta')
+        elif t.get('smoke'):
+            cfg['data_cfg']['val'] = holdout_entries(protocol, 'ret%tva')
+        for entry in cfg['data_cfg']['val']:
+            if stage.startswith('holdout') or t.get('smoke'):
+                overrides = read_json(suite / 'templates' / 'train.json')['data_cfg']['train'][0].get('video_overrides')
+                if overrides:
+                    entry['video_overrides'] = overrides
+    for entry in cfg['data_cfg'].get('train', []) + cfg['data_cfg'].get('val', []):
+        entry['sample_trace_dir'] = str(Path(resources.get('logs_dir', REPO / '.tmp' / suite.name))
+                                       / t['name'] / stage / 'media')
     cfg['model_cfg'] = model
     path = suite / 'trials' / t['name'] / 'configs' / f'{stage}.json'
     write_json(path, cfg)
@@ -339,6 +364,54 @@ def trained_checkpoint(suite, t):
 
 
 # ---------------------------------------------------------------- run
+
+def gpu_free_gib(gpus):
+    lines = subprocess.check_output(['nvidia-smi', '--query-gpu=index,memory.free',
+                                     '--format=csv,noheader,nounits'], text=True).splitlines()
+    values = {int(line.split(',')[0]): float(line.split(',')[1]) / 1024 for line in lines}
+    return {int(gpu): values[int(gpu)] for gpu in gpus}
+
+
+def run_bounded(command, suite, output, log_path, env, gpus, cap, port):
+    resources = read_json(suite / 'protocol.json').get('resources', {})
+    headroom = resources.get('gpu_headroom_gib', 8)
+    while min(gpu_free_gib(gpus).values()) < cap + headroom + 1:
+        print('Waiting for GPU memory:', gpu_free_gib(gpus), flush=True)
+        time.sleep(30)
+    if shutil.disk_usage(suite).free < (resources.get('disk_reserve_gib', 40) + 18) * 2**30:
+        raise RuntimeError('Disk reserve reached; stopping before another stage')
+    with socket.socket() as sock:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            sock.bind(('127.0.0.1', port))
+        except OSError:
+            sock.bind(('127.0.0.1', 0))
+            port = sock.getsockname()[1]
+            command[command.index('--master_port') + 1] = str(port)
+            print(f'Using available distributed port {port}', flush=True)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open('a') as log:
+        process = subprocess.Popen(command, cwd=suite / 'source_snapshot', env=env,
+                                   stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+        write_json(output / 'execution.json', dict(pid=process.pid, command=command,
+                   gpus=gpus, port=port, log=str(log_path), cap_gib=cap, started=time.time()))
+        try:
+            while process.poll() is None:
+                free = gpu_free_gib(gpus)
+                write_json(output / 'resource_status.json', dict(time=time.time(), free_gib=free))
+                if min(free.values()) < headroom:
+                    raise RuntimeError(f'GPU headroom below {headroom} GiB: {free}')
+                time.sleep(5)
+        except BaseException:
+            # This process group was created above and contains only this stage.
+            os.killpg(process.pid, signal.SIGTERM)
+            try:
+                process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait()
+            raise
+    return process.returncode
 
 def cmd_run(args):
     suite = suite_dir(args)
@@ -359,7 +432,7 @@ def cmd_run(args):
             if stage != 'train' and not done(suite, t['name'], 'train'):
                 break
             path, output = build_config(suite, t, stage)
-            command = ['torchrun', '--nnodes', '1', '--nproc_per_node', str(len(gpus)),
+            command = [sys.executable, '-m', 'torch.distributed.run', '--nnodes', '1', '--nproc_per_node', str(len(gpus)),
                        '--master_port', str(args.port), 'run.py', '--config', str(path)]
             print(f"[{time.strftime('%H:%M:%S')}] {t['name']}/{stage}: {' '.join(command)}", flush=True)
             if args.dry_run:
@@ -367,15 +440,34 @@ def cmd_run(args):
             output.mkdir(parents=True, exist_ok=True)
             env = dict(os.environ, CUDA_VISIBLE_DEVICES=args.gpus)
             started = time.time()
-            with (output / 'stdout.log').open('a') as log:
-                code = subprocess.run(command, cwd=suite / 'source_snapshot', env=env,
-                                      stdout=log, stderr=subprocess.STDOUT).returncode
+            protocol = read_json(suite / 'protocol.json')
+            logs = Path(protocol.get('resources', {}).get('logs_dir', REPO / '.tmp' / suite.name))
+            log_path = logs / t['name'] / stage / 'stdout.log'
+            (log_path.parent / 'log').mkdir(parents=True, exist_ok=True)
+            if not (output / 'log').exists():
+                (output / 'log').symlink_to(log_path.parent / 'log', target_is_directory=True)
+            if not (output / 'stdout.log').exists():
+                (output / 'stdout.log').symlink_to(log_path)
+            try:
+                code = run_bounded(command, suite, output, log_path, env, gpus,
+                                   read_json(path)['run_cfg']['gpu_memory_limit_gib'], args.port)
+            except Exception as error:
+                write_json(output / 'FAILED.json', dict(returncode=1, error=repr(error), config=str(path)))
+                raise
             record = dict(returncode=code, seconds=round(time.time() - started), config=str(path))
             if code == 0 and stage != 'train' and not (output / 'metrics.json').exists():
                 code, record['error'] = 1, 'metrics.json missing'
+            if code == 0 and stage == 'train':
+                try:
+                    trained_checkpoint(suite, t)
+                except (FileNotFoundError, RuntimeError) as error:
+                    code, record['error'] = 1, str(error)
+            record['returncode'] = code
             write_json(output / ('DONE.json' if code == 0 else 'FAILED.json'), record)
             if code != 0:
                 print(f"  FAILED (see {output / 'stdout.log'})")
+                if args.stop_on_failure:
+                    raise SystemExit(f"stopped after {t['name']}/{stage} failed")
                 if stage == 'train':
                     break
 
@@ -385,7 +477,8 @@ def cmd_run(args):
 def holdout_metrics(suite, name):
     video = stage_dir(suite, name, 'holdout_video') / 'metrics.json'
     audio = stage_dir(suite, name, 'holdout_audio') / 'metrics.json'
-    if not (video.exists() and audio.exists()):
+    if not (video.exists() and audio.exists() and done(suite, name, 'holdout_video')
+            and done(suite, name, 'holdout_audio')):
         return None
     result = {}
     for stage, values in read_json(video).items():
@@ -602,6 +695,9 @@ def main():
     p.add_argument('--pretrain-dir', required=True)
     p.add_argument('--holdout-dir')
     p.add_argument('--weights-dir')
+    p.add_argument('--logs-dir')
+    p.add_argument('--train-memory-gib', type=float, default=28)
+    p.add_argument('--eval-memory-gib', type=float, default=27)
     p = sub.add_parser('add')
     p.add_argument('set', choices=sorted(TRIAL_SETS))
     p.add_argument('--top', type=int, default=2)
@@ -613,6 +709,7 @@ def main():
     p.add_argument('--phase', nargs='*')
     p.add_argument('--dry-run', action='store_true')
     p.add_argument('--retry-failed', action='store_true')
+    p.add_argument('--stop-on-failure', action='store_true')
     sub.add_parser('gate-a')
     p = sub.add_parser('gate-b')
     p.add_argument('--hierarchy', help='JSON {trial: hierarchy metric}, e.g. ActivityNet ancestor F1')

@@ -5,7 +5,9 @@ logs
 outputs
 model_weights
 pretrained_weights
-tests
+/tests/*
+!/tests/test_lorentz_omnimodal.py
+!/tests/test_lorentz_reranking.py
 datasets
 docs
 /scripts/*

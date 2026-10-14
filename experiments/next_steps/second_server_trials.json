@@ -1,0 +1,159 @@
+[
+  {
+    "name": "b512_e0_s50",
+    "phase": "server_b_parent512",
+    "steps": 1360,
+    "seed": 50,
+    "new_lr": 0.0001,
+    "model": {
+      "model_type": "lorentz_omnimodal",
+      "hyperbolic_mapping": "direction_radius",
+      "hyperbolic_score": "spectral",
+      "hyperbolic_score_transform": "distance",
+      "hyperbolic_contrast": "text_vs_va",
+      "hyperbolic_temperature": 0.03,
+      "hyperbolic_curvature_init": 1.0,
+      "hyperbolic_learn_curvature": true,
+      "hyperbolic_scale_multiplier": 1,
+      "hyperbolic_consensus_weight": 0.0,
+      "hyperbolic_entailment_weight": 0.0,
+      "hyperbolic_entailment_edges": [],
+      "hyperbolic_entailment_parent": "modality_edges",
+      "hyperbolic_parent_contraction": 1.0,
+      "hyperbolic_parent_floor_margin": 0.001,
+      "hyperbolic_entailment_min_radius": 0.1,
+      "lambda_itm": 0.1,
+      "ret_pairwise_stage1_train": false,
+      "contra_dim": 512,
+      "hyperbolic_subset_seed": 50
+    },
+    "run": {},
+    "provisional": true,
+    "reference": "b512_e0_s50",
+    "stages": [
+      "train",
+      "holdout_video",
+      "holdout_audio"
+    ]
+  },
+  {
+    "name": "b512_perron_w0.1_s50",
+    "phase": "server_b_parent512",
+    "steps": 1360,
+    "seed": 50,
+    "new_lr": 0.0001,
+    "model": {
+      "model_type": "lorentz_omnimodal",
+      "hyperbolic_mapping": "direction_radius",
+      "hyperbolic_score": "spectral",
+      "hyperbolic_score_transform": "distance",
+      "hyperbolic_contrast": "text_vs_va",
+      "hyperbolic_temperature": 0.03,
+      "hyperbolic_curvature_init": 1.0,
+      "hyperbolic_learn_curvature": true,
+      "hyperbolic_scale_multiplier": 1,
+      "hyperbolic_consensus_weight": 0.0,
+      "hyperbolic_entailment_weight": 0.1,
+      "hyperbolic_entailment_edges": [],
+      "hyperbolic_entailment_parent": "perron",
+      "hyperbolic_parent_contraction": 1.0,
+      "hyperbolic_parent_floor_margin": 0.001,
+      "hyperbolic_entailment_min_radius": 0.1,
+      "lambda_itm": 0.1,
+      "ret_pairwise_stage1_train": false,
+      "contra_dim": 512,
+      "hyperbolic_subset_seed": 50
+    },
+    "run": {},
+    "provisional": true,
+    "reference": "b512_e0_s50",
+    "stages": [
+      "train",
+      "holdout_video",
+      "holdout_audio"
+    ]
+  },
+  {
+    "name": "b512_text_w0.1_s50",
+    "phase": "server_b_parent512",
+    "steps": 1360,
+    "seed": 50,
+    "new_lr": 0.0001,
+    "model": {
+      "model_type": "lorentz_omnimodal",
+      "hyperbolic_mapping": "direction_radius",
+      "hyperbolic_score": "spectral",
+      "hyperbolic_score_transform": "distance",
+      "hyperbolic_contrast": "text_vs_va",
+      "hyperbolic_temperature": 0.03,
+      "hyperbolic_curvature_init": 1.0,
+      "hyperbolic_learn_curvature": true,
+      "hyperbolic_scale_multiplier": 1,
+      "hyperbolic_consensus_weight": 0.0,
+      "hyperbolic_entailment_weight": 0.1,
+      "hyperbolic_entailment_edges": [
+        [
+          "t",
+          "v"
+        ],
+        [
+          "t",
+          "a"
+        ]
+      ],
+      "hyperbolic_entailment_parent": "modality_edges",
+      "hyperbolic_parent_contraction": 1.0,
+      "hyperbolic_parent_floor_margin": 0.001,
+      "hyperbolic_entailment_min_radius": 0.1,
+      "lambda_itm": 0.1,
+      "ret_pairwise_stage1_train": false,
+      "contra_dim": 512,
+      "hyperbolic_subset_seed": 50
+    },
+    "run": {},
+    "provisional": true,
+    "reference": "b512_e0_s50",
+    "stages": [
+      "train",
+      "holdout_video",
+      "holdout_audio"
+    ]
+  },
+  {
+    "name": "b512_svd_w0.1_s50",
+    "phase": "server_b_parent512",
+    "steps": 1360,
+    "seed": 50,
+    "new_lr": 0.0001,
+    "model": {
+      "model_type": "lorentz_omnimodal",
+      "hyperbolic_mapping": "direction_radius",
+      "hyperbolic_score": "spectral",
+      "hyperbolic_score_transform": "distance",
+      "hyperbolic_contrast": "text_vs_va",
+      "hyperbolic_temperature": 0.03,
+      "hyperbolic_curvature_init": 1.0,
+      "hyperbolic_learn_curvature": true,
+      "hyperbolic_scale_multiplier": 1,
+      "hyperbolic_consensus_weight": 0.0,
+      "hyperbolic_entailment_weight": 0.1,
+      "hyperbolic_entailment_edges": [],
+      "hyperbolic_entailment_parent": "svd_learned_radius",
+      "hyperbolic_parent_contraction": 1.0,
+      "hyperbolic_parent_floor_margin": 0.001,
+      "hyperbolic_entailment_min_radius": 0.1,
+      "lambda_itm": 0.1,
+      "ret_pairwise_stage1_train": false,
+      "contra_dim": 512,
+      "hyperbolic_subset_seed": 50
+    },
+    "run": {},
+    "provisional": true,
+    "reference": "b512_e0_s50",
+    "stages": [
+      "train",
+      "holdout_video",
+      "holdout_audio"
+    ]
+  }
+]

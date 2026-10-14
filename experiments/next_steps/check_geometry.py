@@ -11,10 +11,13 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 from easydict import EasyDict
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from utils import lorentz_spectral as geometry  # noqa: E402
 from model.lorentz_omnimodal import LorentzOmnimodal  # noqa: E402
+from model.hyperbolic_spectral_pmrl import HyperbolicSpectralPMRL  # noqa: E402
+from model.pmrl import PMRL  # noqa: E402
 
 torch.manual_seed(0)
 
@@ -145,9 +148,38 @@ def legacy_loss(model, points):
     return (.5 * (F.cross_entropy(forward / tau, targets) + F.cross_entropy(backward / tau, targets))).item()
 
 
+def check_matched_kernel_lift():
+    config = EasyDict(contra_dim=8, hyperbolic_geometry_fp64=True,
+                      hyperbolic_entailment_weight=0., hyperbolic_parent_contraction=1.)
+    with mock.patch.object(PMRL, '__init__', lambda self, cfg: nn.Module.__init__(self)):
+        kernel = HyperbolicSpectralPMRL(config)
+    lorentz = tiny_model()
+    features = {m: torch.randn(8, 8) for m in 'tva'}
+    for m in 'tva':
+        with torch.no_grad():
+            kernel.hyperbolic_radius_heads[m].weight.normal_(std=.1)
+            lorentz.hyperbolic_radius_heads[m].load_state_dict(kernel.hyperbolic_radius_heads[m].state_dict())
+        left, right = kernel._lift(features[m], m), lorentz._lift(features[m], m)
+        check(f'Gate A identical FP64 lift ({m})', left.dtype == torch.float64 and torch.equal(left, right))
+    points = [kernel._lift(features[m], m) for m in 'tva']
+    torch.testing.assert_close(kernel._pairwise_distance(points[0], points[1]),
+                               lorentz._pairwise_distance(points[0], points[1]), atol=0, rtol=0)
+    loss = kernel.spectral_loss(*points)
+    loss.backward()
+    check('FP64 kernel loss and gradients finite', loss.dtype == torch.float64
+          and torch.isfinite(loss).item() and all(torch.isfinite(p.grad).all() for p in kernel.parameters() if p.grad is not None))
+    q, v, a = [lorentz._lift(torch.randn(n, 8), m) for n, m in ((5, 't'), (513, 'v'), (513, 'a'))]
+    with torch.no_grad():
+        expected = geometry.gram_similarity(geometry.candidate_gram(q, [v, a], lorentz.hyperbolic_curvature),
+                                             lorentz.hyperbolic_curvature)
+        actual = lorentz.retrieval_tuple_similarity(q, {'v': v, 'a': a}, chunk_size=2)
+    check('Native tuple candidate chunking preserves scores', torch.allclose(actual, expected, atol=1e-12, rtol=1e-12))
+
+
 if __name__ == '__main__':
     check_spectrum()
     check_transforms()
     check_eigenpair_gradient()
     check_losses()
+    check_matched_kernel_lift()
     print('all checks passed')

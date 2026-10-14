@@ -63,7 +63,8 @@ class PMRL(MMGeneralModule):
     @staticmethod
     def _distributed_pairwise_batch(values):
         if dist.is_available() and dist.is_initialized():
-            gathered = all_gather_with_grad(values)
+            # SVD column slices are views; NCCL all_gather requires contiguous inputs.
+            gathered = all_gather_with_grad(values.contiguous())
             rank = dist.get_rank()
         else:
             gathered = values
@@ -77,6 +78,9 @@ class PMRL(MMGeneralModule):
     def retrieval_similarity(self, text, candidate):
         """Native Stage-1 similarity used by training and evaluation."""
         return torch.matmul(text, candidate.permute(1, 0))
+
+    def training_diagnostics(self):
+        return dict(getattr(self, '_spectral_diagnostics', {}))
 
     def pairwise_stage1_loss(self, text, audio):
         """Symmetric distributed T-A InfoNCE with one positive per audio."""
@@ -473,6 +477,13 @@ class PMRL(MMGeneralModule):
                 # Compute the loss for intra-modal alignment
                 loss_intra_ = F.cross_entropy(eigenvalues, torch.zeros(eigenvalues.shape[0]).to(eigenvalues.device).long())
                 principal_eigenvector = eigenvectors[:, :, 0]
+                if getattr(self.config, 'log_spectral_diagnostics', False):
+                    # eigenvalues here are singular values divided by tau1.
+                    with torch.no_grad():
+                        singular = eigenvalues.detach() * self.tau1
+                        gap = singular[:, 0] - singular[:, 1]
+                        self._spectral_diagnostics = dict(pmrl_sigma_gap_min=gap.min().item(),
+                                                          pmrl_sigma_gap_mean=gap.mean().item())
             
                 if getattr(self.config, 'pmrl_global_negatives', False):
                     # Matched to the hyperbolic tuple losses: 1 positive + all global-batch negatives.

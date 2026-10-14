@@ -30,6 +30,7 @@ class HyperbolicSpectralPMRL(PMRL):
     def __init__(self, config):
         super().__init__(config)
         dimension = config.contra_dim
+        self.hyperbolic_geometry_fp64 = bool(getattr(config, "hyperbolic_geometry_fp64", False))
         self.hyperbolic_spectral_temperature = float(
             getattr(config, "hyperbolic_spectral_temperature", 0.02)
         )
@@ -102,6 +103,11 @@ class HyperbolicSpectralPMRL(PMRL):
         self.register_buffer(
             "_hyperbolic_log_curvature_max", torch.tensor(math.log(10.0))
         )
+        if self.hyperbolic_geometry_fp64:
+            self.hyperbolic_log_modality_scales.double()
+            self.hyperbolic_log_curvature.data = self.hyperbolic_log_curvature.data.double()
+            self._hyperbolic_log_curvature_min = self._hyperbolic_log_curvature_min.double()
+            self._hyperbolic_log_curvature_max = self._hyperbolic_log_curvature_max.double()
 
     @classmethod
     def _normalize_modality(cls, value, field="modality"):
@@ -200,6 +206,9 @@ class HyperbolicSpectralPMRL(PMRL):
 
     def _pairwise_distance(self, left, right):
         curvature = self.hyperbolic_curvature
+        if getattr(self, "hyperbolic_geometry_fp64", False):
+            from utils.lorentz_spectral import pair_distance
+            return pair_distance(left, right, curvature)
         normalized_inner = (
             -curvature * self._pairwise_lorentz_inner(left, right)
         ).clamp_min(1.0 + 1e-6)
@@ -214,6 +223,11 @@ class HyperbolicSpectralPMRL(PMRL):
             log_radius_delta = math.log(3.0) * torch.tanh(
                 self.hyperbolic_radius_heads[modality](features)
             )
+            if getattr(self, "hyperbolic_geometry_fp64", False):
+                from utils.lorentz_spectral import expmap0
+                tangent = direction.double() * torch.exp(
+                    self.hyperbolic_log_modality_scales[modality] + log_radius_delta.double())
+                return expmap0(tangent, self.hyperbolic_curvature)
             tangent = direction * torch.exp(
                 self.hyperbolic_log_modality_scales[modality]
                 + log_radius_delta
@@ -398,11 +412,8 @@ class HyperbolicSpectralPMRL(PMRL):
     def spectral_loss(self, text, vision, audio):
         """Symmetric singleton-anchor vs paired-other-modalities loss."""
         with autocast(enabled=False):
-            features = {
-                "t": text.float(),
-                "v": vision.float(),
-                "a": audio.float(),
-            }
+            dtype = torch.float64 if getattr(self, "hyperbolic_geometry_fp64", False) else torch.float32
+            features = {"t": text.to(dtype), "v": vision.to(dtype), "a": audio.to(dtype)}
             gathered = {}
             targets = None
             for modality in self.modalities:
@@ -454,6 +465,9 @@ class HyperbolicSpectralPMRL(PMRL):
 
     def retrieval_similarity(self, text, vision):
         with autocast(enabled=False):
+            if getattr(self, "hyperbolic_geometry_fp64", False):
+                from utils.lorentz_spectral import pair_distance
+                return -pair_distance(text, vision, self.hyperbolic_curvature)
             return -self._pairwise_distance(text.float(), vision.float())
 
     def _hard_negative_scores(self, text, condition):
