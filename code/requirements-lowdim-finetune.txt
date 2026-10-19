@@ -1,0 +1,18 @@
+# Source CPU validation environment. Install only in a project-local venv.
+# Match the torch/CUDA wheel to the destination GPU/driver, then repeat gates.
+torch==2.0.1
+torchvision==0.15.2
+torchaudio==2.0.2
+numpy==1.26.4
+transformers==4.31.0
+easydict==1.13
+decord==0.6.0
+Pillow==11.3.0
+h5py==3.14.0
+toolz==1.0.0
+ftfy==6.3.1
+regex==2024.11.6
+einops==0.8.1
+imageio-ffmpeg==0.6.0
+tqdm==4.67.1
+# Plotting is optional; training/CPU validation does not import matplotlib.

@@ -1,0 +1,394 @@
+[
+  {
+    "name": "msrvtt_vast_d8_s50",
+    "dataset": "msrvtt",
+    "method": "vast",
+    "dimension": 8,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_vast_d32_s50",
+    "dataset": "msrvtt",
+    "method": "vast",
+    "dimension": 32,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_vast_d128_s50",
+    "dataset": "msrvtt",
+    "method": "vast",
+    "dimension": 128,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_vast_d512_s50",
+    "dataset": "msrvtt",
+    "method": "vast",
+    "dimension": 512,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_gram_d8_s50",
+    "dataset": "msrvtt",
+    "method": "gram",
+    "dimension": 8,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_gram_d32_s50",
+    "dataset": "msrvtt",
+    "method": "gram",
+    "dimension": 32,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_gram_d128_s50",
+    "dataset": "msrvtt",
+    "method": "gram",
+    "dimension": 128,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_gram_d512_s50",
+    "dataset": "msrvtt",
+    "method": "gram",
+    "dimension": 512,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_pmrl_d8_s50",
+    "dataset": "msrvtt",
+    "method": "pmrl",
+    "dimension": 8,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_pmrl_d32_s50",
+    "dataset": "msrvtt",
+    "method": "pmrl",
+    "dimension": 32,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_pmrl_d128_s50",
+    "dataset": "msrvtt",
+    "method": "pmrl",
+    "dimension": 128,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_pmrl_d512_s50",
+    "dataset": "msrvtt",
+    "method": "pmrl",
+    "dimension": 512,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_hyp_cone_d8_s50",
+    "dataset": "msrvtt",
+    "method": "hyp_cone",
+    "dimension": 8,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_hyp_cone_d32_s50",
+    "dataset": "msrvtt",
+    "method": "hyp_cone",
+    "dimension": 32,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_hyp_cone_d128_s50",
+    "dataset": "msrvtt",
+    "method": "hyp_cone",
+    "dimension": 128,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_hyp_cone_d512_s50",
+    "dataset": "msrvtt",
+    "method": "hyp_cone",
+    "dimension": 512,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_hyp_none_d8_s50",
+    "dataset": "msrvtt",
+    "method": "hyp_none",
+    "dimension": 8,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_hyp_none_d32_s50",
+    "dataset": "msrvtt",
+    "method": "hyp_none",
+    "dimension": 32,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_hyp_none_d128_s50",
+    "dataset": "msrvtt",
+    "method": "hyp_none",
+    "dimension": 128,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_hyp_none_d512_s50",
+    "dataset": "msrvtt",
+    "method": "hyp_none",
+    "dimension": 512,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_euc_cone_d8_s50",
+    "dataset": "msrvtt",
+    "method": "euc_cone",
+    "dimension": 8,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_euc_cone_d32_s50",
+    "dataset": "msrvtt",
+    "method": "euc_cone",
+    "dimension": 32,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_euc_cone_d128_s50",
+    "dataset": "msrvtt",
+    "method": "euc_cone",
+    "dimension": 128,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_euc_cone_d512_s50",
+    "dataset": "msrvtt",
+    "method": "euc_cone",
+    "dimension": 512,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_euc_none_d8_s50",
+    "dataset": "msrvtt",
+    "method": "euc_none",
+    "dimension": 8,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_euc_none_d32_s50",
+    "dataset": "msrvtt",
+    "method": "euc_none",
+    "dimension": 32,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_euc_none_d128_s50",
+    "dataset": "msrvtt",
+    "method": "euc_none",
+    "dimension": 128,
+    "seed": 50
+  },
+  {
+    "name": "msrvtt_euc_none_d512_s50",
+    "dataset": "msrvtt",
+    "method": "euc_none",
+    "dimension": 512,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_vast_d8_s50",
+    "dataset": "activitynet",
+    "method": "vast",
+    "dimension": 8,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_vast_d32_s50",
+    "dataset": "activitynet",
+    "method": "vast",
+    "dimension": 32,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_vast_d128_s50",
+    "dataset": "activitynet",
+    "method": "vast",
+    "dimension": 128,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_vast_d512_s50",
+    "dataset": "activitynet",
+    "method": "vast",
+    "dimension": 512,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_gram_d8_s50",
+    "dataset": "activitynet",
+    "method": "gram",
+    "dimension": 8,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_gram_d32_s50",
+    "dataset": "activitynet",
+    "method": "gram",
+    "dimension": 32,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_gram_d128_s50",
+    "dataset": "activitynet",
+    "method": "gram",
+    "dimension": 128,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_gram_d512_s50",
+    "dataset": "activitynet",
+    "method": "gram",
+    "dimension": 512,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_pmrl_d8_s50",
+    "dataset": "activitynet",
+    "method": "pmrl",
+    "dimension": 8,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_pmrl_d32_s50",
+    "dataset": "activitynet",
+    "method": "pmrl",
+    "dimension": 32,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_pmrl_d128_s50",
+    "dataset": "activitynet",
+    "method": "pmrl",
+    "dimension": 128,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_pmrl_d512_s50",
+    "dataset": "activitynet",
+    "method": "pmrl",
+    "dimension": 512,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_hyp_cone_d8_s50",
+    "dataset": "activitynet",
+    "method": "hyp_cone",
+    "dimension": 8,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_hyp_cone_d32_s50",
+    "dataset": "activitynet",
+    "method": "hyp_cone",
+    "dimension": 32,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_hyp_cone_d128_s50",
+    "dataset": "activitynet",
+    "method": "hyp_cone",
+    "dimension": 128,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_hyp_cone_d512_s50",
+    "dataset": "activitynet",
+    "method": "hyp_cone",
+    "dimension": 512,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_hyp_none_d8_s50",
+    "dataset": "activitynet",
+    "method": "hyp_none",
+    "dimension": 8,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_hyp_none_d32_s50",
+    "dataset": "activitynet",
+    "method": "hyp_none",
+    "dimension": 32,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_hyp_none_d128_s50",
+    "dataset": "activitynet",
+    "method": "hyp_none",
+    "dimension": 128,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_hyp_none_d512_s50",
+    "dataset": "activitynet",
+    "method": "hyp_none",
+    "dimension": 512,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_euc_cone_d8_s50",
+    "dataset": "activitynet",
+    "method": "euc_cone",
+    "dimension": 8,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_euc_cone_d32_s50",
+    "dataset": "activitynet",
+    "method": "euc_cone",
+    "dimension": 32,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_euc_cone_d128_s50",
+    "dataset": "activitynet",
+    "method": "euc_cone",
+    "dimension": 128,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_euc_cone_d512_s50",
+    "dataset": "activitynet",
+    "method": "euc_cone",
+    "dimension": 512,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_euc_none_d8_s50",
+    "dataset": "activitynet",
+    "method": "euc_none",
+    "dimension": 8,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_euc_none_d32_s50",
+    "dataset": "activitynet",
+    "method": "euc_none",
+    "dimension": 32,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_euc_none_d128_s50",
+    "dataset": "activitynet",
+    "method": "euc_none",
+    "dimension": 128,
+    "seed": 50
+  },
+  {
+    "name": "activitynet_euc_none_d512_s50",
+    "dataset": "activitynet",
+    "method": "euc_none",
+    "dimension": 512,
+    "seed": 50
+  }
+]

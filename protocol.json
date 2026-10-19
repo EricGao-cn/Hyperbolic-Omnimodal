@@ -1,0 +1,277 @@
+{
+  "schema_version": 1,
+  "datasets": {
+    "msrvtt": {
+      "vision_frames": 2,
+      "audio_windows": 1,
+      "max_caption_len": 40
+    },
+    "activitynet": {
+      "vision_frames": 8,
+      "audio_windows": 2,
+      "max_caption_len": 160
+    }
+  },
+  "methods": [
+    "vast",
+    "gram",
+    "pmrl",
+    "hyp_cone",
+    "hyp_none",
+    "euc_cone",
+    "euc_none"
+  ],
+  "dimensions": [
+    8,
+    32,
+    128,
+    512
+  ],
+  "seed": 50,
+  "epochs": 10,
+  "global_batch": 64,
+  "learning_rate": 2e-05,
+  "vision_learning_rate": 5e-07,
+  "betas": [
+    0.9,
+    0.98
+  ],
+  "weight_decay": 0.01,
+  "warmup_fraction": 0.05,
+  "grad_clip": 2.0,
+  "cache": {
+    "version": 1,
+    "candidate_frames": 32,
+    "short_edge": 256,
+    "resize": "bilinear",
+    "audio_melbins": 64,
+    "audio_target_length": 1024,
+    "audio_mean": 15.41663,
+    "audio_std": 6.55582,
+    "sample_rate": 16000,
+    "frame_length": 25,
+    "frame_shift": 10,
+    "vision_mean": [
+      0.48145466,
+      0.4578275,
+      0.40821073
+    ],
+    "vision_std": [
+      0.26862954,
+      0.26130258,
+      0.27577711
+    ]
+  },
+  "temperature": 0.07,
+  "curvature": 1.0,
+  "hyperbolic_K": 0.1,
+  "euclidean_K": 0.2,
+  "radius_min": 0.21,
+  "radius_max": 4.0,
+  "entailment_weight": 0.1,
+  "pair_mode": "minimal9",
+  "early_stopping": false,
+  "selection": "Validation six-direction macro R@1; epoch zero eligible; ties keep earliest.",
+  "initialization": "Pretrained encoders; train-only nested PCA; identical VAST-initialized seven heads and radius=1 for all four geometry arms.",
+  "inference": "Six directions, no ITM: native cosine / hyperbolic geodesic / Euclidean distance.",
+  "execution_policy": "CPU preparation only until explicit GPU-stage launch; never auto-launch on newly available GPUs.",
+  "model_cfg": {
+    "model_type": "lorentz_omnimodal",
+    "itm_ratio": 0.1,
+    "frozen_vision": false,
+    "frozen_audio": false,
+    "checkpointing": true,
+    "max_caption_len": 40,
+    "max_omni_caption_len": 70,
+    "max_subtitle_len": 70,
+    "contra_dim": 512,
+    "inherit_keys": [
+      "vision_encoder_type",
+      "audio_encoder_type",
+      "audio_melbins",
+      "audio_target_length"
+    ],
+    "frame_embedding_type": "adaptive",
+    "vision_resolution": 224,
+    "vision_encoder_type": "evaclip01_giant",
+    "audio_encoder_type": "beats",
+    "audio_melbins": 64,
+    "audio_target_length": 1024,
+    "beam_size": 3,
+    "captioner_mode": false,
+    "generate_nums": 1,
+    "ret_bidirection_evaluation": false,
+    "itm_rerank_num": 50,
+    "evaluation_type": "evaluation_mm",
+    "default": "/home/xiaobo.xia/YuxuanGao/Hyperbolic-Omnimodal/config/pmrl/default_model_cfg.json",
+    "tau1": 0.5,
+    "tau2": 0.1,
+    "lambda_itm": 0.1,
+    "hyperbolic_spectral_temperature": 0.02,
+    "hyperbolic_spectral_anchor": "text",
+    "hyperbolic_entailment_weight": 0.0,
+    "hyperbolic_entailment_min_radius": 0.1,
+    "hyperbolic_entailment_edges": [],
+    "hyperbolic_mapping": "direction_radius",
+    "hyperbolic_score": "spectral",
+    "hyperbolic_score_transform": "distance",
+    "hyperbolic_contrast": "text_vs_va",
+    "hyperbolic_temperature": 0.03,
+    "hyperbolic_curvature_init": 1.0,
+    "hyperbolic_learn_curvature": true,
+    "hyperbolic_scale_multiplier": 1,
+    "hyperbolic_consensus_weight": 0.0,
+    "hyperbolic_entailment_parent": "modality_edges",
+    "hyperbolic_parent_contraction": 1.0,
+    "hyperbolic_parent_floor_margin": 0.001,
+    "ret_pairwise_stage1_train": false,
+    "hyperbolic_subset_seed": 50
+  },
+  "input_dims": {
+    "t": 768,
+    "v": 1408,
+    "a": 768
+  },
+  "checkpoints": {
+    "vast": {
+      "root": "data",
+      "path": "PMRL/models/model_weights/pretrain_vast/ckpt/model_step_204994.pt"
+    },
+    "gram": {
+      "root": "data",
+      "path": "local-storage-20261019/Hyperbolic-Omnimodal/outputs/author_unimodal_20261016/checkpoints/gram_model_step_459.pt"
+    },
+    "pmrl": {
+      "root": "data",
+      "path": "local-storage-20261019/Hyperbolic-Omnimodal/outputs/author_unimodal_20261016/checkpoints/pmrl_base.pt"
+    }
+  },
+  "assets": {
+    "root": "data",
+    "path": "PMRL/models/pretrained_weights"
+  },
+  "gram_hps": {
+    "run_cfg": {
+      "checkpoint": "",
+      "output_dir": "./output/vast/pretrain_vast/downstream/finetuneMSRVTT3",
+      "gradient_accumulation_steps": 1,
+      "clip_lr": 5e-07,
+      "optim": "adamw",
+      "learning_rate": 2e-05,
+      "betas": [
+        0.9,
+        0.98
+      ],
+      "weight_decay": 0.01,
+      "grad_norm": 2.0,
+      "warmup_ratio": 0.1,
+      "resume": false,
+      "seed": 50,
+      "fp16": true,
+      "bf16": false,
+      "zero_shot": false,
+      "scheduler": "warmup_linear",
+      "new_lr": 0,
+      "new_params_name": [],
+      "valid_freq": 10,
+      "dataset_mix_type": "random",
+      "remove_before_ckpt": true,
+      "first_eval": true,
+      "pretrain_dir": "./output/vast/pretrain_vast/downstream/finetuneMSRVTT3",
+      "num_train_steps": 0,
+      "save_best": true,
+      "pin_mem": true,
+      "vision_resolution": 224,
+      "use_ddp": false,
+      "mode": "testing",
+      "log_steps": 100,
+      "default": "./config/vast/default_run_cfg.json"
+    },
+    "model_cfg": {
+      "model_type": "vast",
+      "itm_ratio": 0.1,
+      "frozen_vision": false,
+      "frozen_audio": false,
+      "checkpointing": true,
+      "max_caption_len": 40,
+      "max_omni_caption_len": 70,
+      "max_subtitle_len": 70,
+      "contra_dim": 512,
+      "inherit_keys": [
+        "vision_encoder_type",
+        "audio_encoder_type",
+        "audio_melbins",
+        "audio_target_length"
+      ],
+      "frame_embedding_type": "adaptive",
+      "vision_resolution": 224,
+      "vision_encoder_type": "evaclip01_giant",
+      "audio_encoder_type": "beats",
+      "audio_melbins": 64,
+      "audio_target_length": 1024,
+      "beam_size": 3,
+      "captioner_mode": false,
+      "generate_nums": 1,
+      "ret_bidirection_evaluation": true,
+      "itm_rerank_num": 50,
+      "evaluation_type": "evaluation_mm",
+      "default": "./config/vast/default_model_cfg.json",
+      "max_vision_sample_num": 8,
+      "max_audio_sample_num": 1
+    },
+    "data_cfg": {
+      "train": [
+        {
+          "type": "annoindexed",
+          "training": true,
+          "name": "msrvtt_ret",
+          "txt": "datasets/annotations/msrvtt/descs_ret_train.json",
+          "vision": "/leonardo_scratch/fast/IscrC_NeuroGen/dataset/MSRVTT/videos_train",
+          "audio": "/leonardo_scratch/fast/IscrC_NeuroGen/dataset/MSRVTT/audios_train",
+          "vision_transforms": "crop_flip",
+          "vision_format": "video_rawvideo",
+          "vision_sample_num": 8,
+          "audio_sample_num": 1,
+          "task": "ret%tv%ta",
+          "epoch": 4,
+          "n_workers": 8,
+          "batch_size": 64
+        }
+      ],
+      "val": [
+        {
+          "type": "annoindexed",
+          "training": false,
+          "name": "msrvtt_ret",
+          "txt": "datasets/annotations/msrvtt/descs_ret_test.json",
+          "vision": "/leonardo_scratch/fast/IscrC_NeuroGen/dataset/MSRVTT/videos_test",
+          "vision_transforms": "crop_flip",
+          "vision_format": "video_rawvideo",
+          "audio": "/leonardo_scratch/fast/IscrC_NeuroGen/dataset/MSRVTT/audios_test",
+          "vision_sample_num": 8,
+          "audio_sample_num": 1,
+          "task": "ret%tv%tva",
+          "n_workers": 8,
+          "batch_size": 64
+        }
+      ],
+      "concatenated_nums": 1
+    },
+    "local_rank": 0
+  },
+  "author_sources": {
+    "vast": {
+      "root": "authors",
+      "path": "VAST"
+    },
+    "gram": {
+      "root": "authors",
+      "path": "GRAM"
+    }
+  },
+  "checkpoint_sha256": {
+    "vast": "9005d283ea0de99549efbedeb7d21c8e25bea8fa41c0f6570296b0e7a055a6c5",
+    "gram": "070c4b25a12f0a2861ced77d9bbe871e649f9be5b390e680e6049114a51b99d5",
+    "pmrl": "78ab07cf45f9465fcd1cb0a01b7c32ec83a467e642338a67bd6079bdb21b8836"
+  }
+}

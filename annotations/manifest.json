@@ -1,0 +1,18 @@
+{
+  "msrvtt": {
+    "counts": {
+      "train": 7427,
+      "val": 500,
+      "test": 884
+    },
+    "sha256": "a26c6155bb681741d1ac5d8bed1b276b58be8a5d09191efc9612968714edd77a"
+  },
+  "activitynet": {
+    "counts": {
+      "train": 7580,
+      "val": 500,
+      "test": 3987
+    },
+    "sha256": "167c374998cbcd0935f6004b45553a977cf7b84302aa5305817fc59c3947ba4c"
+  }
+}
